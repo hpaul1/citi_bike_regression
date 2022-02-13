@@ -1,0 +1,72 @@
+---
+title: "Citi Bike Analysis"
+output: html_notebook
+---
+```{r}
+library(ggplot2)
+library(data.table)
+library(dplyr)
+library(stats)
+```
+
+#### Import Data
+```{r}
+rm(list=ls())
+# Load the cleaned data set created by citi_bike_anlaysis.py
+db <- read.csv("cleaned_data.csv")
+
+head(db, n=5)
+```
+```{r}
+#Look at summary statistics for selected variables
+db_select <- db %>% select(membership_ind, total_precip, precip_ind,trip_time, day, distance, TMAX,TMIN)
+sapply(db_select, summary)
+```
+
+#### Create a Logistic Regression Model 
+```{r}
+#Create a logistic regression model to test what variables impact if the rider is a member
+set.seed(0423)
+# Select sample set
+sample <- sample.int(n = nrow(db), size = floor(.80*nrow(db)), replace = F)
+
+# training data set
+db_train <- db[sample, ]
+
+# test data set
+db_test  <- db[-sample, ]
+```
+
+
+
+```{r}
+# Note: I initally ran this model and included the maximum temperature and trip length (in minutes) but there was a near zero coefficent on those variables so they were removed for a more accurante model.
+
+logistic <- glm(membership_ind ~ rush_ind + distance + precip_ind, family=binomial(link='logit'), data=db_train)
+# summary of estimated model
+summary(logistic)
+# maximized log-likelihood
+logLik(logistic)
+```
+```{r}
+## show odds ratios
+exp(coef(logistic))
+## odds ratios and 95% Confidence Interval
+exp(cbind(OR = coef(logistic), confint(logistic)))
+```
+This model suggests that distance, if the trip is during rush hour, and precipitation are statistically significant factors that predict if the rider has a membership.The odds ratio on the distance suggests that as the trip distance decreases by one kilometer, the rider is .94 less likely to be a member. The rush indicator suggests that if the trip was taken during rush hour,the the rider is 1.21 times as likely to be a member The precipitation indicator suggests that if the day has precipitation, the rider is 1.12 times as likely to have a membership.
+
+```{r}
+# Predict
+db_test$predict_probability_temp <- predict(logistic, newdata = db_test, type = "response") 
+db_test$predict_probability = as.matrix(db_test$predict_probability_temp)
+# Actual proportion of customers who accepted the offer
+cat('Actual mean:', mean(db_test$membership_ind))
+
+```
+```{r}
+cat('Predicted mean:',mean(db_test$predict_probability,,na.rm = TRUE))
+```
+
+The actual mean and predicted mean were very close, indicating that the rush hour, precipitation,and distance are factors that influence if the rider has a citi bike membership. The closeness of the predicted mean to the actual mean shows that the model did a good job at predicting membership based on the variables. This information could be valuable for  operations and marketing for citi bike and could be used to try to increase rider membership.
+
