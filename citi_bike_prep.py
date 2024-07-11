@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 import numpy as np
-from sklearn.neighbors import DistanceMetric
+from sklearn.metrics import DistanceMetric
 from math import radians
 import math
 
